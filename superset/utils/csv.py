@@ -110,24 +110,26 @@ def df_to_escaped_csv(df: pd.DataFrame, **kwargs: Any) -> Any:
     decimal_separator = kwargs.get("decimal", ".")
     for column_position, (_, column) in enumerate(df.items()):
         if pd.api.types.is_string_dtype(column.dtype):
-            for row_position, value in enumerate(column):
+            values: list[Any] = []
+            for value in column:
                 if isinstance(value, str):
-                    df.iat[row_position, column_position] = escape_value(value)
+                    value = escape_value(value)
                 elif isinstance(value, Decimal) and value.is_finite():
                     # Preserve precision and scale without passing numeric text
                     # through the string formula-prefix escaping path.
-                    df.iat[row_position, column_position] = format_decimal(
-                        value
-                    ).replace(".", decimal_separator)
+                    value = format_decimal(value).replace(".", decimal_separator)
                 elif (
                     decimal_separator != "."
                     and isinstance(value, Real)
                     and not isinstance(value, (bool, int))
                     and pd.notna(value)
                 ):
-                    df.iat[row_position, column_position] = str(value).replace(
-                        ".", decimal_separator
-                    )
+                    value = str(value).replace(".", decimal_separator)
+                values.append(value)
+            df.isetitem(
+                column_position,
+                pd.Series(values, index=column.index, dtype=column.dtype),
+            )
 
     return df.to_csv(escapechar="\\", **kwargs)
 

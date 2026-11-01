@@ -559,14 +559,16 @@ def test_csv_export_preserves_duplicate_labels(
 
 
 @pytest.mark.parametrize("decimal_separator", [".", ","])
+@pytest.mark.parametrize("null_value", [None, np.nan], ids=["none", "nan"])
 def test_csv_export_duplicate_labels_preserve_mixed_types(
     decimal_separator: str,
+    null_value: Any,
 ) -> None:
     """Duplicate labels preserve exact numbers, nulls, bools and formula escaping."""
     frame = pd.DataFrame(
         [
             [Decimal("-1.2500"), 1.5, True, 7, "=1+2"],
-            [Decimal("2.5000"), None, False, 8, "keep.this"],
+            [Decimal("2.5000"), null_value, False, 8, "keep.this"],
         ],
         columns=["value"] * 5,
         index=[0, 0],
