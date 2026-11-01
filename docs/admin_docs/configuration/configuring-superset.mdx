@@ -161,6 +161,8 @@ columns. Decimal precision and trailing zeros are preserved. Text values
 such as `"1.25"` keep their contents, and spreadsheet formula protection
 still applies to strings. Streaming CSV exports use the same decimal
 separator. The default separator remains `.`.
+Duplicate row labels and repeated verbose column names preserve each cell's
+value independently when formatting and escaping CSV exports.
 
 Changing `BABEL_DEFAULT_LOCALE` or a chart's number format does not set these
 CSV options. These settings also do not convert numeric XLSX cells into

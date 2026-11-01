@@ -523,3 +523,64 @@ def test_csv_export_honors_decimal_separator_for_mixed_numbers(
     assert df_to_escaped_csv(
         frame, index=False, decimal=decimal_separator, sep=";"
     ) == (f'mixed\n{amount}\n{number}\nTrue\n1.25\n\'=formula\n""\n')
+
+
+@pytest.mark.parametrize("decimal_separator", [".", ","])
+@pytest.mark.parametrize(
+    "duplicate_axis", ["unique", "index", "columns", "both", "multiindex"]
+)
+def test_csv_export_preserves_duplicate_labels(
+    decimal_separator: str, duplicate_axis: str
+) -> None:
+    """Formatting a cell must not overwrite another row or column with its label."""
+    frame = pd.DataFrame(
+        [
+            [Decimal("1.2500"), Decimal("3.7500")],
+            [Decimal("2.5000"), Decimal("4.2500")],
+        ],
+        columns=["amount", "amount"]
+        if duplicate_axis in {"columns", "both"}
+        else ["first", "second"],
+        index=["group", "group"]
+        if duplicate_axis in {"index", "both"}
+        else ["first", "second"],
+    )
+    if duplicate_axis == "multiindex":
+        frame.index = pd.MultiIndex.from_tuples([("group", 1), ("group", 1)])
+    original = frame.copy(deep=True)
+    expected_values = "1.2500;3.7500\n2.5000;4.2500\n".replace(".", decimal_separator)
+    expected_header = ";".join(frame.columns)
+
+    assert (
+        df_to_escaped_csv(frame, index=False, sep=";", decimal=decimal_separator)
+        == f"{expected_header}\n{expected_values}"
+    )
+    pd.testing.assert_frame_equal(frame, original)
+
+
+@pytest.mark.parametrize("decimal_separator", [".", ","])
+def test_csv_export_duplicate_labels_preserve_mixed_types(
+    decimal_separator: str,
+) -> None:
+    """Duplicate labels preserve exact numbers, nulls, bools and formula escaping."""
+    frame = pd.DataFrame(
+        [
+            [Decimal("-1.2500"), 1.5, True, 7, "=1+2"],
+            [Decimal("2.5000"), None, False, 8, "keep.this"],
+        ],
+        columns=["value"] * 5,
+        index=[0, 0],
+        dtype=object,
+    )
+    original = frame.copy(deep=True)
+    amount = "-1.2500".replace(".", decimal_separator)
+    number = "1.5".replace(".", decimal_separator)
+    second_amount = "2.5000".replace(".", decimal_separator)
+
+    assert df_to_escaped_csv(
+        frame, index=False, sep=";", decimal=decimal_separator
+    ) == (
+        f"value;value;value;value;value\n{amount};{number};True;7;'=1+2\n"
+        f"{second_amount};;False;8;keep.this\n"
+    )
+    pd.testing.assert_frame_equal(frame, original)
